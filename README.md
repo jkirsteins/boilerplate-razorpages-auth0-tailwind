@@ -42,6 +42,8 @@ Then (in this project) set the configuration values in `appsettings.json`.
 
 Run `npm install` and `npm install -g webpack`
 
+This project is used with [nvm](https://github.com/nvm-sh/nvm), using version `14.15.3` in `.nvmrc`.
+
 ## 4. Generate the main CSS file
 
 Do this by running `webpack`.
