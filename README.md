@@ -2,16 +2,23 @@
 
 This is the required boilerplate for starting a new project, using:
 
-- Auth0
-- Tailwind
-- ASP.NET Core RazorPages
+- .NET 5.0
+- [Auth0](https://auth0.com)
+- [Tailwind](https://tailwindcss.com)
+- [ASP.NET Core RazorPages](https://docs.microsoft.com/en-us/aspnet/core/razor-pages/?view=aspnetcore-5.0&tabs=visual-studio)
 
 It is meant as a minimal starting point. To reduce the very boring busywork of setting up
 Tailwind and Auth0.
 
-## 1. Create an Auth0 application
+Licenced under the <a href="LICENSE">MIT licence</a>.
 
+## 1. Rename the project and namespace
 
+Search for `aspnet_tailwind` in this project's files. Replace it with your desired namespace.
+
+Rename the `aspnet-tailwind.csproj` file to your desired project file.
+
+## 2. Create an Auth0 application
 
 For development purposes, configure these values in your Auth0 application (in the Auth0 dashboard):
 
@@ -31,11 +38,11 @@ Then (in this project) set the configuration values in `appsettings.json`.
 
 **IMPORTANT**: `Auth0:ClientId` and `Auth0:ClientSecret` need to be set via `dotnet secret set ...` or via environment variables.
 
-## 2. Install nodejs dependencies
+## 3. Install nodejs dependencies
 
 Run `npm install` and `npm install -g webpack`
 
-## 3. Generate the main CSS file
+## 4. Generate the main CSS file
 
 Do this by running `webpack`.
 
