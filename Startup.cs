@@ -1,16 +1,24 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-
 namespace aspnet_tailwind
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Security.Claims;
+    using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Authentication.Cookies;
+    using Microsoft.AspNetCore.Authentication.JwtBearer;
+    using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+    using Microsoft.AspNetCore.Authorization;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.HttpsPolicy;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+    using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+    using Microsoft.IdentityModel.Tokens;
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -24,6 +32,93 @@ namespace aspnet_tailwind
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
+
+            services.AddMvc()
+                .AddRazorPagesOptions(options =>
+                {
+                    options.Conventions.AuthorizeFolder("/");
+                    options.Conventions.AllowAnonymousToPage("/login");
+                });
+
+            this.ConfigureAuth0ForMVC(services);
+        }
+
+        private void ConfigureAuth0ForMVC(IServiceCollection services)
+        {
+            // Cookie configuration for HTTPS
+            services.Configure<CookiePolicyOptions>(options =>
+            {
+               options.MinimumSameSitePolicy = SameSiteMode.Strict;
+            });
+
+            // Add authentication services
+            services.AddAuthentication(options => {
+                options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            })
+            .AddCookie(options => {
+                options.LoginPath = "/login";
+                options.LogoutPath = "/logout";
+            })
+            .AddOpenIdConnect("Auth0", options => {
+                // Set the authority to your Auth0 domain
+                options.Authority = $"https://{Configuration["Auth0:Domain"]}";
+
+                // Configure the Auth0 Client ID and Client Secret
+                options.ClientId = Configuration["Auth0:ClientId"];
+                options.ClientSecret = Configuration["Auth0:ClientSecret"];
+
+                // Set response type to code
+                options.ResponseType = OpenIdConnectResponseType.Code;
+
+                // Configure the scope
+                options.Scope.Clear();
+                options.Scope.Add("openid");
+                options.Scope.Add("profile");
+                options.Scope.Add("email");
+
+                // Set the callback path, so Auth0 will call back to http://localhost:3000/callback
+                // Also ensure that you have added the URL as an Allowed Callback URL in your Auth0 dashboard
+                options.CallbackPath = new PathString("/callback");
+
+                // Configure the Claims Issuer to be Auth0
+                options.ClaimsIssuer = "Auth0";
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    // Auth0 uses 'name', which doesn't get picked up automatically by ASP.NET
+                    NameClaimType = "name"
+                };
+
+                options.Events = new OpenIdConnectEvents
+                {
+                    // handle the logout redirection
+                    OnRedirectToIdentityProviderForSignOut = (context) =>
+                    {
+                        var logoutUri = $"https://{Configuration["Auth0:Domain"]}/v2/logout?client_id={Configuration["Auth0:ClientId"]}";
+
+                        var postLogoutUri = context.Properties.RedirectUri;
+                        if (!string.IsNullOrEmpty(postLogoutUri))
+                        {
+                            if (postLogoutUri.StartsWith("/"))
+                            {
+                                // transform to absolute
+                                var request = context.Request;
+                                postLogoutUri = request.Scheme + "://" + request.Host + request.PathBase + postLogoutUri;
+                            }
+                            logoutUri += $"&returnTo={ Uri.EscapeDataString(postLogoutUri)}";
+                        }
+
+                        context.Response.Redirect(logoutUri);
+                        context.HandleResponse();
+
+                        return Task.CompletedTask;
+                    }
+                };
+            });
+
+            // Add framework services.
+            services.AddControllersWithViews();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -39,6 +134,9 @@ namespace aspnet_tailwind
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
+
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();

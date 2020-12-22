@@ -1,8 +1,23 @@
 ﻿@page
-@model IndexModel
 @{
     ViewData["Title"] = "Home page";
+
+    @functions{
+        string token = "nope";
+        public void OnGet()
+        {
+            token = User.Identity.Name;
+            string yo = string.Join(", ", User.Claims.Select(o => o.ToString()));
+            token = yo;
+        }
+    }
 }
 
-<h1 class="font-bold text-2xl">Hello World</h1>
-<p class="text-red-600 pt-2">Example project with Tailwind CSS and ASP.NET Core.</p>
+<h1 class="font-bold text-2xl">Hello, @(User.Identity.Name)!</h1>
+<p class="">Your claims:</p>
+<ul>
+    @foreach (var claim in User.Claims)
+    {
+        <li><strong>@(claim.Type)</strong> = @(claim.Value)</li>
+    }
+</ul>

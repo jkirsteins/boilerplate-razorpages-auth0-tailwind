@@ -1,0 +1,30 @@
+@page
+@using Microsoft.AspNetCore.Authentication
+@{
+    Layout = "UnauthenticatedLayout";
+
+    @functions{
+        public IActionResult OnGet()
+        {
+            if (User.Identity.IsAuthenticated)
+            {
+                return Redirect("/");
+            }
+
+            return Page();
+        }
+        public Task OnPost()
+        {
+            return HttpContext.ChallengeAsync("Auth0", new AuthenticationProperties() { RedirectUri = Request.Query["ReturnUrl"] });
+        }
+    }
+}
+
+<form method="post">
+    <button
+        type="submit"
+        class="border border-indigo-500 text-indigo-500 rounded-md px-4 py-2 m-2 transition duration-500 ease select-none hover:text-white hover:bg-indigo-600 focus:outline-none focus:shadow-outline"
+    >
+        Log in via Auth0
+    </button>
+</form>
